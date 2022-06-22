@@ -125,7 +125,7 @@ bool write_fully(context_t & ctx, FILE *out, ssize_t count)
 {
     for (ssize_t offset = 0; offset < count; )
     {
-        ssize_t written = fwrite(ctx.buf, sizeof(uint8_t), count - offset, out);
+        ssize_t written = fwrite(&ctx.buf[offset], sizeof(uint8_t), count - offset, out);
         if (written <= 0)
             return false;
         offset += written;
@@ -137,8 +137,9 @@ bool write_fully(context_t & ctx, FILE *out, ssize_t count)
 status process_data(context_t & ctx, FILE *out, FILE *in, const settings_t & settings)
 {
     Crypto crypto(settings.key);
+    bool eof = false;
 
-    while (!feof(in))
+    do
     {
         // Read block of data
         ssize_t read = fread(ctx.buf, sizeof(uint8_t), BUFFER_SIZE, in);
@@ -147,6 +148,7 @@ status process_data(context_t & ctx, FILE *out, FILE *in, const settings_t & set
             fprintf(stderr, "Error reading file: error=%d", int(errno));
             return status::IO_ERROR;
         }
+        eof = feof(in);
 
         // Process the block
         for (ssize_t i=0; i<read; ++i)
@@ -179,7 +181,7 @@ status process_data(context_t & ctx, FILE *out, FILE *in, const settings_t & set
                 return status::IO_ERROR;
             }
         }
-    }
+    } while (!eof);
 
     return status::OK;
 }
